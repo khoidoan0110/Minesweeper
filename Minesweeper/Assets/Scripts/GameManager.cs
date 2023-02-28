@@ -16,18 +16,6 @@ public class GameManager : MonoBehaviour
 
     private Cell[,] state;
 
-    private void OnValidate()
-    {
-        mineCount = Mathf.Clamp(mineCount, 0, width * height);
-    }
-
-    private void Awake()
-    {
-        width = PlayerPrefs.GetInt("X");
-        height = PlayerPrefs.GetInt("Y");
-        mineCount = PlayerPrefs.GetInt("NumBombs");
-    }
-
     private void Start()
     {
         NewGame();
@@ -52,7 +40,7 @@ public class GameManager : MonoBehaviour
 
     public void QuitGame()
     {
-        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex - 1, LoadSceneMode.Single);
+        Application.Quit();
     }
 
     private void SpawnCells()

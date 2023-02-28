@@ -355,9 +355,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 81b8e51cb54a6654ea10f5e53238add9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  width: 3
-  height: 3
-  mineCount: 2
+  width: 16
+  height: 16
+  mineCount: 32
   board: {fileID: 1282288225}
   gameOverTitle: {fileID: 1406647167}
   gameOver: {fileID: 522929619}
