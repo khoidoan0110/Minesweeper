@@ -11,6 +11,8 @@ public class GameManager : MonoBehaviour
     [SerializeField] private int mineCount = 32;
     [SerializeField] private Board board;
     [SerializeField] private TextMeshProUGUI gameOverTitle;
+    [SerializeField] private AudioSource audioSource;
+    [SerializeField] private AudioClip audioClip;
     public CanvasGroup gameOver;
     private bool isOver;
 
@@ -18,6 +20,7 @@ public class GameManager : MonoBehaviour
 
     private void Start()
     {
+        audioSource.Play();
         NewGame();
     }
 
@@ -299,6 +302,8 @@ public class GameManager : MonoBehaviour
             }
         }
 
+        audioSource.Stop();
+        audioSource.PlayOneShot(audioClip);
         StartCoroutine(Fade(gameOver, 1f, 0.7f, "Game Over"));
     }
 
