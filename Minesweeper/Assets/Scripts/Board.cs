@@ -14,7 +14,8 @@ public class Board : MonoBehaviour
     }
 
     public void Draw(Cell[,] state)
-    { //array 2d [,]
+    { 
+        //use [,] to tell that you are using array 2d
         int width = state.GetLength(0);
         int height = state.GetLength(1);
 

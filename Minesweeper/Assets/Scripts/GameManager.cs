@@ -1,5 +1,4 @@
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
 using UnityEngine.SceneManagement;
@@ -11,26 +10,36 @@ public class GameManager : MonoBehaviour
     [SerializeField] private int mineCount = 32;
     [SerializeField] private Board board;
     [SerializeField] private TextMeshProUGUI gameOverTitle;
-    [SerializeField] private AudioSource audioSource;
-    [SerializeField] private AudioClip audioClip;
+
+    public AudioSource audioSource;
+    public AudioClip lose, win;
     public CanvasGroup gameOver;
     private bool isOver;
 
     private Cell[,] state;
 
+    void OnValidate(){
+        mineCount = Mathf.Clamp(mineCount, 1, width * height - 1);
+    }
+
     private void Start()
     {
-        audioSource.Play();
         NewGame();
     }
 
-    public void NewGame()
+    private void NewGame()
     {
+        if (!audioSource.isPlaying)
+        {
+            audioSource.Play();
+        }
+
         gameOver.alpha = 0f;
         gameOver.interactable = false;
 
         isOver = false;
         state = new Cell[width, height];
+
         SpawnCells();
         SpawnMines();
         SpawnNumberedTiles();
@@ -143,7 +152,7 @@ public class GameManager : MonoBehaviour
         {
             NewGame();
         }
-        else if (!isOver)
+        else if (isOver == false)
         {
             HandleMouseClick();
         }
@@ -153,7 +162,7 @@ public class GameManager : MonoBehaviour
     {
         if (Input.GetMouseButtonDown(1))
         {
-            FlagTile();
+            SetTileFlag();
         }
         else if (Input.GetMouseButtonDown(0))
         {
@@ -161,7 +170,7 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    private void FlagTile()
+    private void SetTileFlag()
     {
         Vector3 worldPosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
         Vector3Int cellPosition = board.tilemap.WorldToCell(worldPosition);
@@ -180,7 +189,7 @@ public class GameManager : MonoBehaviour
 
     private Cell GetCell(int x, int y)
     {
-        if (isValid(x, y))
+        if (isInsideBoard(x, y))
         {
             return state[x, y];
         }
@@ -190,7 +199,7 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    private bool isValid(int x, int y)
+    private bool isInsideBoard(int x, int y)
     {
         //check out of index bounds
         return x >= 0 && x < width && y >= 0 && y < height;
@@ -258,7 +267,8 @@ public class GameManager : MonoBehaviour
         }
 
         StartCoroutine(Fade(gameOver, 1f, 0.7f, "You Win!!!"));
-        // Debug.Log("You Win!!!");
+        audioSource.Stop();
+        audioSource.PlayOneShot(win);
     }
 
     private void Flood(Cell cell)
@@ -269,7 +279,7 @@ public class GameManager : MonoBehaviour
         cell.revealed = true;
         state[cell.position.x, cell.position.y] = cell;
 
-        // Recursion 
+        // Recursion check
         if (cell.type == Cell.Type.Empty)
         {
             Flood(GetCell(cell.position.x - 1, cell.position.y));
@@ -303,7 +313,7 @@ public class GameManager : MonoBehaviour
         }
 
         audioSource.Stop();
-        audioSource.PlayOneShot(audioClip);
+        audioSource.PlayOneShot(lose);
         StartCoroutine(Fade(gameOver, 1f, 0.7f, "Game Over"));
     }
 
