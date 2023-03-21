@@ -14,7 +14,7 @@ public class Board : MonoBehaviour
     }
 
     public void Draw(Cell[,] state)
-    { 
+    {
         //use [,] to tell that you are using array 2d
         int width = state.GetLength(0);
         int height = state.GetLength(1);
@@ -39,14 +39,20 @@ public class Board : MonoBehaviour
         {
             return tileFlag;
         }
+        else if (cell.emptied)
+        {
+            return tileEmpty;
+        }
         else
         {
             return tileUnknown;
         }
     }
 
-    private Tile GetRevealedTile(Cell cell){
-        switch(cell.type){
+    private Tile GetRevealedTile(Cell cell)
+    {
+        switch (cell.type)
+        {
             case Cell.Type.Empty: return tileEmpty;
             case Cell.Type.Mine: return cell.exploded ? tileExploded : tileMine;
             case Cell.Type.Number: return GetNumberedTile(cell);
@@ -54,8 +60,10 @@ public class Board : MonoBehaviour
         }
     }
 
-    private Tile GetNumberedTile(Cell cell){
-        switch(cell.number){
+    private Tile GetNumberedTile(Cell cell)
+    {
+        switch (cell.number)
+        {
             case 1: return tile1;
             case 2: return tile2;
             case 3: return tile3;

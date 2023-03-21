@@ -254,8 +254,14 @@ public class GameManager : MonoBehaviour
 
         Cell cell = GetCell(cellPosition.x, cellPosition.y);
 
-        if (cell.type == Cell.Type.Invalid || cell.revealed || cell.flagged)
+        if (cell.type == Cell.Type.Invalid || cell.flagged)
         {
+            return;
+        }
+
+        if (cell.revealed)
+        {
+            HighlightAdjacentTiles(cellPosition);
             return;
         }
 
@@ -314,6 +320,44 @@ public class GameManager : MonoBehaviour
         AudioManager.instance.PlaySFX("Win", 1f);
     }
 
+    private void HighlightAdjacentTiles(Vector3Int cellPosition)
+    {
+        for (int x = -1; x <= 1; x++)
+        {
+            for (int y = -1; y <= 1; y++)
+            {
+                int adjacentX = cellPosition.x + x;
+                int adjacentY = cellPosition.y + y;
+
+                if (adjacentX < 0 || adjacentX >= state.GetLength(0) || adjacentY < 0 || adjacentY >= state.GetLength(1))
+                {
+                    continue;
+                }
+
+                Cell adjacentCell = GetCell(adjacentX, adjacentY);
+
+                if (!adjacentCell.revealed && !adjacentCell.flagged)
+                {
+                    StartCoroutine(HighlightAdjacentTilesCo(adjacentX, adjacentY));
+                }
+            }
+        }
+    }
+
+    private IEnumerator HighlightAdjacentTilesCo(int x, int y)
+    {
+        Cell adjacentCell = GetCell(x, y);
+        adjacentCell.emptied = true;
+        state[x, y] = adjacentCell;
+        board.Draw(state);
+
+        yield return new WaitForSeconds(0.1f);
+
+        adjacentCell.emptied = false;
+        state[x, y] = adjacentCell;
+        board.Draw(state);
+    }
+
     private void Flood(Cell cell)
     {
         if (cell.revealed) return;
@@ -357,6 +401,7 @@ public class GameManager : MonoBehaviour
         }
 
         StartCoroutine(Fade(gameOver, 1f, 0.7f, "Game Over"));
+        AudioManager.instance.PlaySFX("Lose", 1f);
         score = 0;
     }
 
@@ -370,7 +415,7 @@ public class GameManager : MonoBehaviour
         }
 
         yield return new WaitForSecondsRealtime(delay);
-        AudioManager.instance.PlaySFX("Lose", 1f);
+
         float elapsed = 0f;
         float duration = 0.5f;
         float from = canvasGroup.alpha;

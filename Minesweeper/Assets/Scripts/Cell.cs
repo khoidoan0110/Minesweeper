@@ -9,12 +9,12 @@ public struct Cell
         Invalid,
         Empty,
         Mine,
-        Number
+        Number,
     }
     public Type type;
 
     public Vector3Int position;
     public int number;
 
-    public bool revealed, exploded, flagged;
+    public bool revealed, exploded, flagged, emptied;
 }

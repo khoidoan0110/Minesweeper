@@ -11,10 +11,13 @@ public class AudioManager : MonoBehaviour
 
     private void Awake()
     {
-        if (instance == null)
+        if (instance != null)
         {
-            instance = this;
+            Destroy(this.gameObject);
+            return;
         }
+        instance = this;
+        DontDestroyOnLoad(this.gameObject);
     }
 
     private void Start()
@@ -75,7 +78,8 @@ public class AudioManager : MonoBehaviour
 
     public void MusicVolume(float volume)
     {
-        if(volume == 0){
+        if (volume == 0)
+        {
             musicSource.mute = true;
         }
         else musicSource.mute = false;
@@ -84,7 +88,8 @@ public class AudioManager : MonoBehaviour
 
     public void SFXVolume(float volume)
     {
-        if(volume == 0){
+        if (volume == 0)
+        {
             sfxSource.mute = true;
         }
         else sfxSource.mute = false;
@@ -107,10 +112,5 @@ public class AudioManager : MonoBehaviour
             return false;
         }
         else return true;
-    }
-
-    public void StopMusic()
-    {
-        musicSource.Stop();
     }
 }
