@@ -8,31 +8,54 @@ public class GameManager : MonoBehaviour
     [SerializeField] private int width = 16;
     [SerializeField] private int height = 16;
     [SerializeField] private int mineCount = 32;
+    [SerializeField] private GameObject settingsPanel;
+
     [SerializeField] private Board board;
     [SerializeField] private TextMeshProUGUI gameOverTitle;
+    [SerializeField] private TextMeshProUGUI timerText;
+    [SerializeField] private TextMeshProUGUI scoreText;
+    [SerializeField] private TextMeshProUGUI highscoreText;
 
-    public AudioSource audioSource;
-    public AudioClip lose, win;
+    private int score, highScore;
+    private int numFlags;
+    private float elapsedTime;
+
     public CanvasGroup gameOver;
     private bool isOver;
 
     private Cell[,] state;
 
-    void OnValidate(){
-        mineCount = Mathf.Clamp(mineCount, 1, width * height - 1);
-    }
-
     private void Start()
     {
+        score = 0;
+        highScore = PlayerPrefs.GetInt("HighScore", 0);
+        numFlags = 0;
+
+        if (LevelSelector.selectedDifficulty == 1)
+        {
+            width = 9;
+            height = 9;
+            mineCount = 10;
+        }
+        else if (LevelSelector.selectedDifficulty == 2)
+        {
+            width = 16;
+            height = 16;
+            mineCount = 40;
+        }
+        else if (LevelSelector.selectedDifficulty == 3)
+        {
+            //NewGame(30, 16, 99);
+            width = 30;
+            height = 16;
+            mineCount = 99;
+        }
         NewGame();
     }
 
     private void NewGame()
     {
-        if (!audioSource.isPlaying)
-        {
-            audioSource.Play();
-        }
+        elapsedTime = 0f;
 
         gameOver.alpha = 0f;
         gameOver.interactable = false;
@@ -41,7 +64,7 @@ public class GameManager : MonoBehaviour
         state = new Cell[width, height];
 
         SpawnCells();
-        SpawnMines();
+        SpawnMines(mineCount);
         SpawnNumberedTiles();
 
         //Update camera offset
@@ -50,9 +73,21 @@ public class GameManager : MonoBehaviour
         board.Draw(state);
     }
 
-    public void QuitGame()
+    public void MainMenu()
     {
-        Application.Quit();
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex - 1);
+    }
+
+    public void OpenSettings()
+    {
+        this.enabled = false;
+        settingsPanel.SetActive(true);
+    }
+
+    public void CloseSettings()
+    {
+        settingsPanel.SetActive(false);
+        this.enabled = true;
     }
 
     private void SpawnCells()
@@ -70,7 +105,7 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    private void SpawnMines()
+    private void SpawnMines(int mineCount)
     {
         for (int i = 0; i < mineCount; i++)
         {
@@ -148,14 +183,19 @@ public class GameManager : MonoBehaviour
 
     private void Update()
     {
-        if (Input.GetKeyDown(KeyCode.R))
+        if (isOver == false)
         {
-            NewGame();
-        }
-        else if (isOver == false)
-        {
+            elapsedTime += Time.deltaTime;
+            timerText.text = Mathf.RoundToInt(elapsedTime).ToString();
             HandleMouseClick();
         }
+    }
+
+    private int CalculateScore()
+    {
+        // Points = (Minesweeper Difficulty Level x Board Size x 1000) - (Time taken in seconds x 10) - (Number of flags used x 5)
+        int points = (LevelSelector.selectedDifficulty * width * height * 1000) - (Mathf.RoundToInt(elapsedTime) * 10) - (numFlags * 5);
+        return points;
     }
 
     private void HandleMouseClick()
@@ -185,6 +225,8 @@ public class GameManager : MonoBehaviour
         cell.flagged = !cell.flagged;
         state[cellPosition.x, cellPosition.y] = cell;
         board.Draw(state);
+        AudioManager.instance.PlaySFX("Flag", 2f);
+        numFlags++;
     }
 
     private Cell GetCell(int x, int y)
@@ -223,12 +265,14 @@ public class GameManager : MonoBehaviour
                 Explode(cell);
                 break;
             case Cell.Type.Empty:
+                AudioManager.instance.PlaySFX("Select", 2f);
                 Flood(cell);
                 CheckWinCondition();
                 break;
             default:
                 cell.revealed = true;
                 state[cellPosition.x, cellPosition.y] = cell;
+                AudioManager.instance.PlaySFX("Select", 2f);
                 CheckWinCondition();
                 break;
         }
@@ -267,8 +311,7 @@ public class GameManager : MonoBehaviour
         }
 
         StartCoroutine(Fade(gameOver, 1f, 0.7f, "You Win!!!"));
-        audioSource.Stop();
-        audioSource.PlayOneShot(win);
+        AudioManager.instance.PlaySFX("Win", 1f);
     }
 
     private void Flood(Cell cell)
@@ -292,6 +335,7 @@ public class GameManager : MonoBehaviour
     private void Explode(Cell cell)
     {
         isOver = true;
+        AudioManager.instance.PlaySFX("Bomb", 1f);
 
         cell.revealed = true;
         cell.exploded = true;
@@ -312,18 +356,27 @@ public class GameManager : MonoBehaviour
             }
         }
 
-        audioSource.Stop();
-        audioSource.PlayOneShot(lose);
         StartCoroutine(Fade(gameOver, 1f, 0.7f, "Game Over"));
+        score = 0;
     }
 
     private IEnumerator Fade(CanvasGroup canvasGroup, float to, float delay, string title)
     {
+        score = CalculateScore();
+        if (score > highScore)
+        {
+            highScore = Mathf.RoundToInt(score);
+            PlayerPrefs.SetInt("HighScore", highScore);
+        }
+
         yield return new WaitForSecondsRealtime(delay);
+        AudioManager.instance.PlaySFX("Lose", 1f);
         float elapsed = 0f;
         float duration = 0.5f;
         float from = canvasGroup.alpha;
         gameOverTitle.text = title;
+        scoreText.text = score.ToString();
+        highscoreText.text = highScore.ToString();
 
         while (elapsed < duration)
         {
