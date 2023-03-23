@@ -45,7 +45,6 @@ public class GameManager : MonoBehaviour
         }
         else if (LevelSelector.selectedDifficulty == 3)
         {
-            //NewGame(30, 16, 99);
             width = 30;
             height = 16;
             mineCount = 99;
@@ -261,7 +260,7 @@ public class GameManager : MonoBehaviour
 
         if (cell.revealed)
         {
-            HighlightAdjacentTiles(cellPosition);
+            Chording(cellPosition);
             return;
         }
 
@@ -320,28 +319,94 @@ public class GameManager : MonoBehaviour
         AudioManager.instance.PlaySFX("Win", 1f);
     }
 
-    private void HighlightAdjacentTiles(Vector3Int cellPosition)
+    private void Chording(Vector3Int cellPosition)
     {
-        for (int x = -1; x <= 1; x++)
+        Cell clickedCell = GetCell(cellPosition.x, cellPosition.y);
+        if (clickedCell.revealed && clickedCell.type == Cell.Type.Number)
         {
-            for (int y = -1; y <= 1; y++)
+            if (CountAdjacentFlags(cellPosition.x, cellPosition.y) == clickedCell.number)
             {
-                int adjacentX = cellPosition.x + x;
-                int adjacentY = cellPosition.y + y;
-
-                if (adjacentX < 0 || adjacentX >= state.GetLength(0) || adjacentY < 0 || adjacentY >= state.GetLength(1))
+                for (int x = -1; x <= 1; x++)
                 {
-                    continue;
+                    for (int y = -1; y <= 1; y++)
+                    {
+                        int adjacentX = cellPosition.x + x;
+                        int adjacentY = cellPosition.y + y;
+
+                        if (!isInsideBoard(adjacentX, adjacentY))
+                        {
+                            continue;
+                        }
+
+                        Cell adjacentCell = GetCell(adjacentX, adjacentY);
+
+                        if (!adjacentCell.revealed && !adjacentCell.flagged)
+                        {
+                            adjacentCell.revealed = true;
+
+                            if (adjacentCell.type == Cell.Type.Empty)
+                            {
+                                Flood(adjacentCell);
+                            }
+
+                            if (adjacentCell.type == Cell.Type.Mine)
+                            {
+                                adjacentCell.exploded = true;
+                                Explode(adjacentCell);
+                            }
+
+                            state[adjacentX, adjacentY] = adjacentCell;
+                            board.Draw(state);
+                        }
+                    }
                 }
-
-                Cell adjacentCell = GetCell(adjacentX, adjacentY);
-
-                if (!adjacentCell.revealed && !adjacentCell.flagged)
+            }
+            else
+            {
+                for (int x = -1; x <= 1; x++)
                 {
-                    StartCoroutine(HighlightAdjacentTilesCo(adjacentX, adjacentY));
+                    for (int y = -1; y <= 1; y++)
+                    {
+                        int adjacentX = cellPosition.x + x;
+                        int adjacentY = cellPosition.y + y;
+
+                        if (!isInsideBoard(adjacentX, adjacentY))
+                        {
+                            continue;
+                        }
+
+                        Cell adjacentCell = GetCell(adjacentX, adjacentY);
+
+                        if (!adjacentCell.revealed && !adjacentCell.flagged)
+                        {
+                            StartCoroutine(HighlightAdjacentTilesCo(adjacentX, adjacentY));
+                        }
+                    }
+                }
+            }
+
+        }
+
+
+    }
+
+    private int CountAdjacentFlags(int cellX, int cellY)
+    {
+        int count = 0;
+        for (int adjacentX = -1; adjacentX <= 1; adjacentX++)
+        {
+            for (int adjacentY = -1; adjacentY <= 1; adjacentY++)
+            {
+                int x = cellX + adjacentX;
+                int y = cellY + adjacentY;
+
+                if (isInsideBoard(x, y) && GetCell(x, y).flagged)
+                {
+                    count++;
                 }
             }
         }
+        return count;
     }
 
     private IEnumerator HighlightAdjacentTilesCo(int x, int y)
