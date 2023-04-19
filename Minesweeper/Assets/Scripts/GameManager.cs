@@ -27,6 +27,7 @@ public class GameManager : MonoBehaviour
 
     private void Start()
     {
+        board.enabled = true;
         score = 0;
         highScore = PlayerPrefs.GetInt("HighScore", 0);
         numFlags = 0;
@@ -54,10 +55,10 @@ public class GameManager : MonoBehaviour
 
     private void NewGame()
     {
-        elapsedTime = 0f;
-
         gameOver.alpha = 0f;
         gameOver.interactable = false;
+        AudioManager.instance.PlayMusic("Background");
+        elapsedTime = 0f;
 
         isOver = false;
         state = new Cell[width, height];
@@ -66,7 +67,6 @@ public class GameManager : MonoBehaviour
         SpawnMines(mineCount);
         SpawnNumberedTiles();
 
-        //Update camera offset
         Camera.main.transform.position = new Vector3(width / 2f, height / 2f, -10f);
 
         board.Draw(state);
@@ -261,7 +261,6 @@ public class GameManager : MonoBehaviour
         if (cell.revealed)
         {
             Chording(cellPosition);
-            return;
         }
 
         switch (cell.type)
@@ -270,14 +269,12 @@ public class GameManager : MonoBehaviour
                 Explode(cell);
                 break;
             case Cell.Type.Empty:
-                AudioManager.instance.PlaySFX("Select", 2f);
-                Flood(cell);
+                Flood(cell.position.x, cell.position.y);
                 CheckWinCondition();
                 break;
             default:
                 cell.revealed = true;
                 state[cellPosition.x, cellPosition.y] = cell;
-                AudioManager.instance.PlaySFX("Select", 2f);
                 CheckWinCondition();
                 break;
         }
@@ -316,6 +313,7 @@ public class GameManager : MonoBehaviour
         }
 
         StartCoroutine(Fade(gameOver, 1f, 0.7f, "You Win!!!"));
+        AudioManager.instance.StopMusic();
         AudioManager.instance.PlaySFX("Win", 1f);
     }
 
@@ -324,7 +322,7 @@ public class GameManager : MonoBehaviour
         Cell clickedCell = GetCell(cellPosition.x, cellPosition.y);
         if (clickedCell.revealed && clickedCell.type == Cell.Type.Number)
         {
-            if (CountAdjacentFlags(cellPosition.x, cellPosition.y) == clickedCell.number)
+            if (CountAdjacentFlags(cellPosition.x, cellPosition.y) >= clickedCell.number)
             {
                 for (int x = -1; x <= 1; x++)
                 {
@@ -346,10 +344,9 @@ public class GameManager : MonoBehaviour
 
                             if (adjacentCell.type == Cell.Type.Empty)
                             {
-                                Flood(adjacentCell);
+                                Flood(adjacentX, adjacentY);
                             }
-
-                            if (adjacentCell.type == Cell.Type.Mine)
+                            else if (adjacentCell.type == Cell.Type.Mine)
                             {
                                 adjacentCell.exploded = true;
                                 Explode(adjacentCell);
@@ -386,8 +383,6 @@ public class GameManager : MonoBehaviour
             }
 
         }
-
-
     }
 
     private int CountAdjacentFlags(int cellX, int cellY)
@@ -423,23 +418,28 @@ public class GameManager : MonoBehaviour
         board.Draw(state);
     }
 
-    private void Flood(Cell cell)
+    private void Flood(int x, int y)
     {
+        if (x < 0 || x >= width || y < 0 || y >= height) return;
+
+        Cell cell = state[x, y];
+
         if (cell.revealed) return;
         if (cell.type == Cell.Type.Mine || cell.type == Cell.Type.Invalid) return;
 
         cell.revealed = true;
-        state[cell.position.x, cell.position.y] = cell;
+        state[x, y] = cell;
 
         // Recursion check
         if (cell.type == Cell.Type.Empty)
         {
-            Flood(GetCell(cell.position.x - 1, cell.position.y));
-            Flood(GetCell(cell.position.x + 1, cell.position.y));
-            Flood(GetCell(cell.position.x, cell.position.y - 1));
-            Flood(GetCell(cell.position.x, cell.position.y + 1));
+            Flood(x - 1, y);
+            Flood(x + 1, y);
+            Flood(x, y - 1);
+            Flood(x, y + 1);
         }
     }
+
 
     private void Explode(Cell cell)
     {
@@ -465,7 +465,9 @@ public class GameManager : MonoBehaviour
             }
         }
 
+        board.enabled = false;
         StartCoroutine(Fade(gameOver, 1f, 0.7f, "Game Over"));
+        AudioManager.instance.StopMusic();
         AudioManager.instance.PlaySFX("Lose", 1f);
         score = 0;
     }
@@ -482,7 +484,7 @@ public class GameManager : MonoBehaviour
         yield return new WaitForSecondsRealtime(delay);
 
         float elapsed = 0f;
-        float duration = 0.5f;
+        float duration = 0.1f;
         float from = canvasGroup.alpha;
         gameOverTitle.text = title;
         scoreText.text = score.ToString();
@@ -491,8 +493,8 @@ public class GameManager : MonoBehaviour
         while (elapsed < duration)
         {
             canvasGroup.alpha = Mathf.Lerp(from, to, elapsed / duration);
-            gameOver.interactable = true;
             elapsed += Time.deltaTime;
+            gameOver.interactable = true;
             yield return null;
         }
         canvasGroup.alpha = to;
